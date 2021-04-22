@@ -1,0 +1,149 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+    - RG_name: automationtest-00
+    - offer_Ig: RHEL
+    - publisher_Ig: RedHat
+    - sku_Ig: 8.1
+    - version_Ig: latest
+    - VM_Size: Standard_D2s_v3
+    - R_Location: northeurope
+    - Subnet_Ips_Ranges: "xx.xx.xx.xx/xx"
+    - Public_Key: "CHOOSE ONE"
+    - Source_Ip_NSG: "xx.xx.xx.xx"
+
+  tasks:
+
+    - name: Create a resource group
+      azure_rm_resourcegroup:
+        name: "{{ RG_name }}"
+        location: "{{ R_Location }}"
+
+    - name: Create Virtual Network
+      azure_rm_virtualnetwork:
+        name: "{{ RG_name }}"
+        resource_group: "{{ RG_name }}"
+        address_prefixes_cidr:
+            - "{{ Subnet_Ips_Ranges }}"
+      ignore_errors: True
+
+    - name: Create NSG
+      azure_rm_securitygroup:
+        resource_group: "{{ RG_name }}"
+        name: "{{ RG_name }}"
+        rules:
+          - name: AllowVnetinboundFromADUDP
+            protocol: Udp
+            source_address_prefix: 
+               - xx.xx.xx.xx/xx
+            destination_address_prefix: 
+               - "{{ Subnet_Ips_Ranges }}"
+            destination_port_range:
+               - 88 
+               - 123
+               - 135
+               - 137
+               - 138 
+               - 139
+               - 389
+               - 445
+               - 464
+               - 53 
+               - 49152-65535
+            access: Allow
+            priority: 100
+          - name: AllowVnetinboundFromADTCP
+            protocol: Tcp
+            source_address_prefix: 
+               - xx.0.128.0/27
+            destination_address_prefix: 
+               - "{{ Subnet_Ips_Ranges }}"
+            destination_port_range:
+               - 88
+               - 135
+               - 139
+               - 389
+               - 445
+               - 464
+               - 636
+               - 3268
+               - 3269
+               - 53
+               - 49152-65535
+            access: Allow
+            priority: 1xx
+          - name: RDP
+            protocol: "*" 
+            source_address_prefix: 
+               - xx.xx.xx.xx/xx
+               - xx.xx.xx.xx
+               - xx.xx.xx.xx/xx
+               - xx.xx.xx.xx/xx
+            destination_address_prefix: 
+               - "{{ Subnet_Ips_Ranges }}"
+            destination_port_range:
+               - 3389
+            access: Allow
+            priority: 200
+          - name: SSH
+            protocol: Tcp
+            source_address_prefix: 
+               - xx.xx.xx.xx/xx
+               - xx.xx.xx.xx
+               - xx.xx.xx.xx/xx
+               - xx.xx.xx.xx/xx
+            destination_address_prefix: 
+               - "{{ Subnet_Ips_Ranges }}"
+            destination_port_range:
+               - 22
+            access: Allow
+            priority: 210
+          - name: DenyAllGWANInbound
+            protocol: "*"
+            source_address_prefix: 
+               - xx.xx.xx.xx/xx
+            access: Deny
+            priority: 4000
+
+    - name: Create a subnet
+      azure_rm_subnet:
+        resource_group: "{{ RG_name }}"
+        virtual_network_name: "{{ RG_name }}"
+        name: "{{ RG_name }}"
+        address_prefix_cidr: "{{ Subnet_Ips_Ranges }}"
+        security_group: "{{ RG_name }}"
+      ignore_errors: True
+
+    - name: Create a network interface 
+      azure_rm_networkinterface:
+        name: "{{ RG_name }}"
+        resource_group: "{{ RG_name }}"
+        virtual_network: "{{ RG_name }}"
+        subnet_name: "{{ RG_name }}"
+        create_with_security_group: False
+        ip_configurations:
+          - name: ipconfig1
+            primary: True
+      ignore_errors: True
+
+    - name: Create a VM
+      azure_rm_virtualmachine:
+        resource_group: "{{ RG_name }}"
+        name: "{{ RG_name }}"
+        vm_size: "{{ VM_Size }}"
+        admin_username: azure_root
+        ssh_password_enabled: false
+        virtual_network_name: "{{ RG_name }}"
+        subnet_name: "{{ RG_name }}"
+        network_interfaces: "{{ RG_name }}"        
+        public_ip_allocation_method: Disabled
+        ssh_public_keys:
+          - path: /home/azure_root/.ssh/authorized_keys
+            key_data: "{{ Public_Key }}"
+        image:
+            offer: "{{ offer_Ig }}"
+            publisher: "{{ publisher_Ig }}"
+            sku: "{{ sku_Ig }}"
+            version: "{{ version_Ig }}"
+      ignore_errors: True

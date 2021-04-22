@@ -1,0 +1,35 @@
+---
+- hosts: localhost
+  connection: local
+  vars:
+    - RG_name: automationtest-00
+    - name_sp: automationtest-00
+    - sku_sp: S1
+    - R_Location: northeurope
+    - container_name:  "CHOOSE ONE"
+    - webapp_name:  "CHOOSE ONE"
+  tasks:
+
+    - name: Create a Linux App Service Plan
+      azure_rm_appserviceplan:
+        resource_group: "{{ RG_name }}"
+        name: "{{ name_sp }}"
+        location: "{{ R_Location }}"
+        sku: "{{ sku_sp }}"
+        is_linux: true
+
+    - name: Create a docker web app
+      azure_rm_webapp:
+        resource_group: "{{ RG_name }}"
+        name: "{{ webapp_name  }}"
+        plan:
+          name: "{{ name_sp }}"
+        container_settings:
+          name: "{{ container_name }}"
+
+    - name: Create a webapp slot
+      azure_rm_webappslot:
+        resource_group: "{{ RG_name }}"
+        webapp_name: "{{ webapp_name  }}"
+        name: staging
+        configuration_source: "{{ webapp_name  }}"
