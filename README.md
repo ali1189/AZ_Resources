@@ -43,5 +43,9 @@ Copy playbooks under root user
 
 Run playbooks under root user:  
 
+Before run playbooks you need to d some changes in both files regarding:
+Docker container name & IPs in NSG 
+
       - ansible-playbook Full_Create_VM_RedHat_8.1.yml 
       - ansible-playbook Create_App_Service_and ASP.yml 
+
